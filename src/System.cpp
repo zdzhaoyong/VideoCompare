@@ -123,6 +123,7 @@ void System::complishVideoCompare()
 
 void System::run()
 {
+    svar.i["CurFrameID"]=0;
     string act=svar.GetString("Act","");
     if(act=="TrainVocabulary")
     {
@@ -152,6 +153,7 @@ bool System::trainVideoRef(VideoRef& refVideo,const std::string& refVideoPath)
     {
         while(pause) sleep(10);
         SPtr<VideoFrame> frame(new VideoFrame);
+        frame->id=svar.i["CurFrameID"]++;
         pi::timer.enter("GrabImage");
         for(int i=0;i<trainSkip;i++)
             video.grab();
@@ -224,6 +226,7 @@ bool System::findVideoDiff(VideoRef& refVideo,const std::string& videoPath)
     {
         while(pause) sleep(10);
         SPtr<VideoFrame> frame(new VideoFrame);
+        frame->id=svar.i["CurFrameID"]++;
         pi::timer.enter("GrabImage");
         for(int i=0;i<computeSkip;i++)
             video.grab();

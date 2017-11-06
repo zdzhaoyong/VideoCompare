@@ -92,6 +92,62 @@ bool VideoCompare::updateImages(SPtr<VideoFrame>& frame,SPtr<VideoFrame>& ref,
             if(!diffImgUpdated)
             {
                 cv::absdiff(warpImg,trackImg,diffImg);
+                cv::cvtColor(diffImg,diffImg,CV_BGR2GRAY);
+                cv::threshold(diffImg,diffImg,100,200,cv::THRESH_BINARY);
+                int erodeSize=3;
+                int dilateSize=31;
+                if(erodeSize)
+                {
+                    pi::timer.enter("ContourImpl::TrackContours::erode");
+                    cv::Mat element1 = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(erodeSize,erodeSize));
+                    cv::erode(diffImg,diffImg,element1);
+                    pi::timer.leave("ContourImpl::TrackContours::erode");
+                }
+
+                if(dilateSize)
+                {
+                    pi::timer.enter("ContourImpl::TrackContours::dilate");
+                    cv::Mat element2 = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(dilateSize,dilateSize));
+                    cv::dilate(diffImg,diffImg,element2);
+                    pi::timer.leave("ContourImpl::TrackContours::dilate");
+                }
+                vector<vector<cv::Point> > contours;
+                vector<cv::Vec4i> hierarchy;//=frame.hierarchy;
+                cv::findContours( diffImg.clone(), contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_NONE, cv::Point(0, 0) );//CV_CHAIN_APPROX_SIMPLE
+
+                if(contours.size())
+                {
+                    static ofstream ofs("anomalies.txt");
+
+                    cv::imwrite(std::to_string(frame->id)+"_ref.jpg",ref->img);
+                    cv::imwrite(std::to_string(frame->id)+"_curwarp.jpg",warpImg);
+                    cv::imwrite(std::to_string(frame->id)+"_cur.jpg",trackImg);
+
+                    ofs<<std::to_string(frame->id)+"_ref.jpg"
+                      <<","<<std::to_string(frame->id)+"_cur.jpg"
+                     <<","<<"H";
+                    for(int i=0;i<H.total();i++)
+                    {
+                        if(H.type()==CV_32F)
+                            ofs<<","<<H.at<float>(i);
+                        else ofs<<","<<H.at<double>(i);
+                    }
+                    ofs<<","<<contours.size();
+                    for(int i=0;i<contours.size();i++)
+                    {
+                        ofs<<",-1,Car";
+                        vector<cv::Point> contour=contours[i];
+                        ofs<<","<<contour.size();
+                        for(int j=0;j<contour.size();j++)
+                        {
+                            ofs<<","<<contour[j].x<<","<<contour[j].y;
+                        }
+                    }
+
+                    ofs<<endl;
+
+                }
+
                 diffImgUpdated=1;
             }
 
